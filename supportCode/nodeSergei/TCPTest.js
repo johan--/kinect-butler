@@ -3,7 +3,6 @@
  */
 
 var net = require('net');
-var five = require("johnny-five");
 
 // Keep a list of people who connected
 var clients = [];
@@ -36,7 +35,7 @@ var server = net.createServer(function (socket) {
 });
 
 server.listen(1337, '127.0.0.1');
-
+/*
 board = new five.Board();
 
 board.on("ready", function () {
@@ -85,7 +84,7 @@ board.on("ready", function () {
     board.repl.inject({
         allMotors: allMotors
     });
-});
+});*/
 
 function ProcessCommand(message) {
     // The message will be a stream section, so separate out into individual messages
@@ -110,7 +109,7 @@ function ProcessCommand(message) {
                 DriveStop();
             }
             if (parsedCommand[0] == 'forward') {
-                wheels.both.cw();
+                //wheels.both.cw();
 
                 // Assumes the second argument is amount of milliseconds to drive before stopping
                 if (parsedCommand.length > 1) {
@@ -120,10 +119,10 @@ function ProcessCommand(message) {
 
                 driveCmds[cmdCount] = true;
                 cmdCount++;
-                board.wait(driveTime, EndDrive);
+                //board.wait(driveTime, EndDrive);
             }
             if (parsedCommand[0] == 'back') {
-                wheels.both.ccw();
+                //wheels.both.ccw();
 
                 // Assumes the second argument is amount of milliseconds to drive before stopping
                 if (parsedCommand.length > 1) {
@@ -133,11 +132,11 @@ function ProcessCommand(message) {
 
                 driveCmds[cmdCount] = true;
                 cmdCount++;
-                board.wait(driveTime, EndDrive);
+                //board.wait(driveTime, EndDrive);
             }
             if (parsedCommand[0] == 'left') {
-                wheels.left.ccw();
-                wheels.right.cw();
+                //wheels.left.ccw();
+                //wheels.right.cw();
 
                 if (parsedCommand.length > 1) {
                     driveTime = parseInt(parsedCommand[1])
@@ -151,11 +150,11 @@ function ProcessCommand(message) {
 
                 driveCmds[cmdCount] = true;
                 cmdCount++;
-                board.wait(driveTime, EndDrive);
+                //board.wait(driveTime, EndDrive);
             }
             if (parsedCommand[0] == 'right') {
-                wheels.left.cw();
-                wheels.right.ccw();
+                //wheels.left.cw();
+                //wheels.right.ccw();
 
                 if (parsedCommand.length > 1) {
                     driveTime = parseInt(parsedCommand[1])
@@ -169,13 +168,13 @@ function ProcessCommand(message) {
 
                 driveCmds[cmdCount] = true;
                 cmdCount++;
-                board.wait(driveTime, EndDrive);
+                //board.wait(driveTime, EndDrive);
             }
             if (parsedCommand[0] == 'raise') {
-                lifter.max();
+                //lifter.max();
             }
             if (parsedCommand[0] == 'lower') {
-                lifter.min();
+                //lifter.min();
             }
 
             // Specific motor values
@@ -193,7 +192,7 @@ function ProcessCommand(message) {
 
                 driveCmds[cmdCount] = true;
                 cmdCount++;
-                board.wait(driveTime, EndDrive);
+                //board.wait(driveTime, EndDrive);
             }
             if (parsedCommand[0] == 'driveright') {
                 if (parsedCommand.length > 2) {
@@ -209,9 +208,9 @@ function ProcessCommand(message) {
 
                 driveCmds[cmdCount] = true;
                 cmdCount++;
-                board.wait(driveTime, EndDrive);
+                //board.wait(driveTime, EndDrive);
             }
-
+            
             if (parsedCommand[0] == 'lift') {
                 var liftTo = lifter.max;
                 if (parsedCommand.len > 1) {
@@ -226,7 +225,7 @@ function ProcessCommand(message) {
 // automatic stop timeout for drive motor commands
 //  want to avoid a glitch causing the robot to drive forward forever
 //  only stops if no more drive commands are left in the queue
-function EndDrive(cmdId) {
+function EndDrive (cmdId) {
     if (driveCmds[cmdId]) {
         delete driveCmds[cmdId];
     }
@@ -237,7 +236,7 @@ function EndDrive(cmdId) {
 
 // Stops the drive motors (and resets the drive command queue)
 function DriveStop() {
-    wheels.both.stop();
+    //wheels.both.stop();
     driveCmds = {};
     cmdCount = 0;
 }

@@ -69,6 +69,10 @@ namespace LittleSergei
         private CoordinateMapper coordinateMapper = null;   // Coordinate mapper to map one type of point to another
         private BodyFrameReader reader = null;          // Reader for body frames
         private Body[] bodies = null;                   // Array for the bodies (will only want the closest one)
+        private float closestJointZ = 0;                // depth of the closest joint
+        private float closestBodyZ = 0;                 // Z value of closest person's body
+        private float closestBodyX = 0;                 // X position of closest person's body in camera
+        private float closestLassoZ;                    // Z value of closest hand with a lasso sign
 
         // FOR Microphone
         private KinectAudioStream convertStream = null; // Stream for 32b-16b conversion
@@ -89,7 +93,7 @@ namespace LittleSergei
         {
             // TESTING
             RaiseLift();
-            MoveForward(2000);
+            //MoveForward(2000);
 
             // create a stopwatch for FPS calculation
             this.stopwatch = new Stopwatch();
@@ -353,6 +357,12 @@ namespace LittleSergei
                             // those body objects will be re-used.
                             frame.GetAndRefreshBodyData(this.bodies);
 
+                            // Set closest as max values
+                            closestJointZ = 9999;
+                            closestBodyZ = 9999;
+                            closestBodyX = 200;
+                            closestLassoZ = 9999;
+                            
                             foreach (Body body in this.bodies)
                             {
 
@@ -369,12 +379,52 @@ namespace LittleSergei
                                     {
                                         DepthSpacePoint depthSpacePoint = this.coordinateMapper.MapCameraPointToDepthSpace(joints[jointType].Position);
                                         jointPoints[jointType] = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+
+                                        // Find the closest joint
+                                        if (closestJointZ > joints[jointType].Position.Z)
+                                        {
+                                            closestJointZ = joints[jointType].Position.Z;
+                                        }
+                                        // Check if closest body, if joint type = chest (middle of spine)
+                                        if (jointType == JointType.SpineMid)
+                                        {
+                                            if (closestBodyZ > joints[jointType].Position.Z)
+                                            {
+                                                closestBodyZ = joints[jointType].Position.Z;
+                                                closestBodyX = depthSpacePoint.X;
+                                            }
+                                        }
                                     }
 
                                     this.DrawBody(joints, jointPoints, dc);
 
                                     this.DrawHand(body.HandLeftState, jointPoints[JointType.HandLeft], dc);
                                     this.DrawHand(body.HandRightState, jointPoints[JointType.HandRight], dc);
+
+                                    // If either hand is a lasso, decide how to drive robot
+                                    if (body.HandLeftState == HandState.Lasso)
+                                    {
+                                        if (closestLassoZ > joints[JointType.HandLeft].Position.Z)
+                                        {
+                                            closestLassoZ = joints[JointType.HandLeft].Position.Z;
+                                        }
+                                    }
+                                    if (body.HandRightState == HandState.Lasso)
+                                    {
+                                        if (closestLassoZ > joints[JointType.HandRight].Position.Z)
+                                        {
+                                            closestLassoZ = joints[JointType.HandRight].Position.Z;
+                                        }
+                                    }
+
+                                    if (body.HandRightState == HandState.Open)
+                                    {
+                                        RaiseLift();
+                                    }
+                                    else if (body.HandRightState == HandState.Closed)
+                                    {
+                                        LowerLift();
+                                    }
                                 }
                             }
 
@@ -383,21 +433,55 @@ namespace LittleSergei
                         }
                     }
                 }
+
+                // Create movement commands based on properties
+
+
+                // If there is a lasso hand, drive closer or further (follow closest lasso)
+                if (closestLassoZ < 10)
+                {
+                    if (closestLassoZ > 3)
+                    {
+                        MoveForward(200);
+                    }
+                    if (closestLassoZ < 2)
+                    {
+                        MoveBack(200);
+                    }
+                    Console.WriteLine("Lasso: " + closestLassoZ);
+                }
+
+                // If closest body (within 10 meters) is left or right, turn to match
+                if (closestBodyZ < 10)
+                {
+                    if (closestBodyX < 200)
+                    {
+                        TurnLeft(100);
+                    }
+                    else if (closestBodyX > 300)
+                    {
+                        TurnRight(100);
+                    }
+                    Console.WriteLine("Body Z: " + closestBodyZ);
+                    Console.WriteLine("Body X: " + closestBodyX);
+                }
+
+                // If anything is too close, stop moving
+                if (closestJointZ < 1)
+                {
+                    Console.WriteLine("Something is too close to move");
+                    MoveStop();
+                }
+                // If don't see any bodies, stop moving
+                if (bodies.Length == 0)
+                {
+                    Console.WriteLine("See no body");
+                    MoveStop();
+                }
             }
             catch (Exception)
             {
                 // ignore if the frame is no longer available
-            }
-
-            // If it saw a body, it should stop
-            if (sawBody > 0)
-            {
-                // emit Json Serializable object, anonymous types, or strings
-                MoveStop();
-            }
-            else
-            {
-                MoveForward(500);
             }
         }
 
